@@ -11233,6 +11233,8 @@ self: super: with self; {
   torch = callPackage ../development/python-modules/torch {
     cudaSupport = pkgs.config.cudaSupport or false;
     inherit (pkgs.darwin.apple_sdk.frameworks) CoreServices;
+    inherit (pkgs.darwin.apple_sdk.frameworks) MetalPerformanceShaders;
+    inherit (pkgs.darwin.apple_sdk.frameworks) MetalPerformanceShadersGraph;
     inherit (pkgs.darwin) libobjc;
   };
 

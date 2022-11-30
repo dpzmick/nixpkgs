@@ -10,7 +10,7 @@
 
   # Build inputs
   numactl,
-  CoreServices, libobjc,
+  CoreServices, libobjc, MetalPerformanceShaders, MetalPerformanceShadersGraph,
 
   # Propagated build inputs
   numpy, pyyaml, cffi, click, typing-extensions,
@@ -150,7 +150,7 @@ in buildPythonPackage rec {
     # base is 10.12. Until we upgrade, we can fall back on the older
     # pthread support.
     ./pthreadpool-disable-gcd.diff
-  ];
+  ] ++ lib.optionals (stdenv.isDarwin) [ ./cmake_xcrun.diff ];
 
   preConfigure = lib.optionalString cudaSupport ''
     export TORCH_CUDA_ARCH_LIST="${lib.strings.concatStringsSep ";" final_cudaArchList}"
@@ -173,6 +173,7 @@ in buildPythonPackage rec {
   # of oneDNN through Intel iDeep.
   USE_MKLDNN = setBool mklDnnSupport;
   USE_MKLDNN_CBLAS = setBool mklDnnSupport;
+  #USE_MPS = setBool stdenv.isDarwin;
 
   # Avoid using pybind11 from git submodule
   # Also avoids pytorch exporting the headers of pybind11
@@ -226,10 +227,10 @@ in buildPythonPackage rec {
   ] ++ lib.optionals cudaSupport [ cudatoolkit_joined ];
 
   buildInputs = [ blas blas.provider pybind11 ]
-    ++ [ linuxHeaders_5_19 ] # TMP: avoid "flexible array member" errors for now
     ++ lib.optionals cudaSupport [ cudnn magma nccl ]
+    ++ lib.optionals stdenv.isLinux [] # TMP: avoid "flexible array member" errors for now
     ++ lib.optionals stdenv.isLinux [ numactl ]
-    ++ lib.optionals stdenv.isDarwin [ CoreServices libobjc ];
+    ++ lib.optionals stdenv.isDarwin [ CoreServices libobjc MetalPerformanceShaders ];
 
   propagatedBuildInputs = [
     cffi
