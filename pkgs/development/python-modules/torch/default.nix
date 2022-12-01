@@ -10,7 +10,7 @@
 
   # Build inputs
   numactl,
-  CoreServices, libobjc, MetalPerformanceShaders, MetalPerformanceShadersGraph,
+  Foundation, CoreServices, libobjc, MetalPerformanceShaders, MetalPerformanceShadersGraph,
 
   # Propagated build inputs
   numpy, pyyaml, cffi, click, typing-extensions,
@@ -226,11 +226,14 @@ in buildPythonPackage rec {
     removeReferencesTo
   ] ++ lib.optionals cudaSupport [ cudatoolkit_joined ];
 
+  # FIXME use lib.versionNewer darwin.apple_sdk.sdk.version "11.0"
+  # or something like that to detect if we should enable MPS
+
   buildInputs = [ blas blas.provider pybind11 ]
     ++ lib.optionals cudaSupport [ cudnn magma nccl ]
-    ++ lib.optionals stdenv.isLinux [] # TMP: avoid "flexible array member" errors for now
+    #++ lib.optionals stdenv.isLinux [] # TMP: avoid "flexible array member" errors for now
     ++ lib.optionals stdenv.isLinux [ numactl ]
-    ++ lib.optionals stdenv.isDarwin [ CoreServices libobjc MetalPerformanceShaders ];
+    ++ lib.optionals stdenv.isDarwin [ Foundation CoreServices libobjc MetalPerformanceShaders ];
 
   propagatedBuildInputs = [
     cffi
