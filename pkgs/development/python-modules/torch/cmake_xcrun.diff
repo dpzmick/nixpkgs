@@ -7,7 +7,7 @@ index 4bf1e853dc..4dcb3bffb3 100644
      set(MPS_FOUND OFF)
      execute_process(
 -      COMMAND bash -c "xcodebuild -sdk macosx -version SDKVersion"
-+      COMMAND bash -c "echo 13.0"
++      COMMAND bash -c "echo 12.3"
        RESULT_VARIABLE _exit_code
        OUTPUT_VARIABLE _macosx_sdk_version
        OUTPUT_STRIP_TRAILING_WHITESPACE)

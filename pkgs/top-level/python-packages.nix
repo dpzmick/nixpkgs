@@ -11234,9 +11234,14 @@ self: super: with self; {
     cudaSupport = pkgs.config.cudaSupport or false;
     inherit (pkgs.darwin.apple_sdk.frameworks) Foundation;
     inherit (pkgs.darwin.apple_sdk.frameworks) CoreServices;
+    inherit (pkgs.darwin) libobjc;
+
+    # FIXME these are not required when MPS disabled
+    # but I guess nix knows what the package is, something something lazy eval?
+    inherit (pkgs.darwin.apple_sdk.frameworks) Metal;
     inherit (pkgs.darwin.apple_sdk.frameworks) MetalPerformanceShaders;
     inherit (pkgs.darwin.apple_sdk.frameworks) MetalPerformanceShadersGraph;
-    inherit (pkgs.darwin) libobjc;
+    inherit (pkgs.darwin.apple_sdk.frameworks) AVFoundation;
   };
 
   torch-bin = callPackage ../development/python-modules/torch/bin.nix { };

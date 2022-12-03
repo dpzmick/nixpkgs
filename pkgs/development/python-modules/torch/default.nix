@@ -1,5 +1,6 @@
 { stdenv, lib, fetchFromGitHub, fetchpatch, buildPythonPackage, python,
   cudaSupport ? false, cudaPackages, magma,
+  mpsSupport ? stdenv.isDarwin,
   mklDnnSupport ? true, useSystemNccl ? true,
   MPISupport ? false, mpi,
   buildDocs ? false,
@@ -10,7 +11,8 @@
 
   # Build inputs
   numactl,
-  Foundation, CoreServices, libobjc, MetalPerformanceShaders, MetalPerformanceShadersGraph,
+  Foundation, CoreServices, libobjc,
+  Metal, MetalPerformanceShaders, MetalPerformanceShadersGraph, AVFoundation,
 
   # Propagated build inputs
   numpy, pyyaml, cffi, click, typing-extensions,
@@ -43,6 +45,14 @@ assert !cudaSupport || (let majorIs = lib.versions.major cudatoolkit.version;
 # confirm that cudatoolkits are sync'd across dependencies
 assert !(MPISupport && cudaSupport) || mpi.cudatoolkit == cudatoolkit;
 assert !cudaSupport || magma.cudatoolkit == cudatoolkit;
+
+# FIXME figure this bit out
+# # mps requires a new enough apple sdk
+# assert !(mpsSupport && lib.versionOlder darwin.apple_sdk.version "11.0")
+# # and being on darwin
+# assert mpsSupport && stdenv.isDarwin
+
+assert mpsSupport;
 
 let
   setBool = v: if v then "1" else "0";
@@ -150,7 +160,12 @@ in buildPythonPackage rec {
     # base is 10.12. Until we upgrade, we can fall back on the older
     # pthread support.
     ./pthreadpool-disable-gcd.diff
-  ] ++ lib.optionals (stdenv.isDarwin) [ ./cmake_xcrun.diff ];
+  ] ++ lib.optionals mpsSupport [
+    # when building with MPS, need to override the detecting setup in cmake
+    # FIXME hardcoded the SDK version, which is a problem
+    # maybe should use env var?
+    ./cmake_xcrun.diff
+  ];
 
   preConfigure = lib.optionalString cudaSupport ''
     export TORCH_CUDA_ARCH_LIST="${lib.strings.concatStringsSep ";" final_cudaArchList}"
@@ -173,7 +188,6 @@ in buildPythonPackage rec {
   # of oneDNN through Intel iDeep.
   USE_MKLDNN = setBool mklDnnSupport;
   USE_MKLDNN_CBLAS = setBool mklDnnSupport;
-  #USE_MPS = setBool stdenv.isDarwin;
 
   # Avoid using pybind11 from git submodule
   # Also avoids pytorch exporting the headers of pybind11
@@ -226,14 +240,12 @@ in buildPythonPackage rec {
     removeReferencesTo
   ] ++ lib.optionals cudaSupport [ cudatoolkit_joined ];
 
-  # FIXME use lib.versionNewer darwin.apple_sdk.sdk.version "11.0"
-  # or something like that to detect if we should enable MPS
-
   buildInputs = [ blas blas.provider pybind11 ]
     ++ lib.optionals cudaSupport [ cudnn magma nccl ]
-    #++ lib.optionals stdenv.isLinux [] # TMP: avoid "flexible array member" errors for now
+    ++ lib.optionals stdenv.isLinux [ linuxHeaders_5_19 ] # TMP: avoid "flexible array member" errors for now
     ++ lib.optionals stdenv.isLinux [ numactl ]
-    ++ lib.optionals stdenv.isDarwin [ Foundation CoreServices libobjc MetalPerformanceShaders ];
+    ++ lib.optionals stdenv.isDarwin [ Foundation CoreServices libobjc ]
+    ++ lib.optionals mpsSupport [ Metal MetalPerformanceShaders MetalPerformanceShadersGraph AVFoundation ];
 
   propagatedBuildInputs = [
     cffi
